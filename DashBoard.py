@@ -15,21 +15,12 @@ c = sql.connect("db.db")
 df = pd.read_sql_query("SELECT * FROM df", c)
 last_df = pd.read_sql_query("SELECT * FROM last_df", c)
 first_df = pd.read_sql_query("SELECT * FROM first_df", c)
-print(df.head())
+left_df = pd.read_sql_query("SELECT * FROM left_df", c)
+late_df = pd.read_sql_query("SELECT * FROM late_df", c)
+allTrajetory_df = pd.read_sql_query("SELECT * FROM allTrajetory_df", c)
 
 # Create a dash application
 app = dash.Dash(__name__)
-
-fig = go.Figure(data=go.Heatmap(
-        z=df.corr(),
-        x= df.corr().columns,
-        y= df.corr().columns))
-
-fig.update_layout(
-    autosize=False,
-    width=1500,
-    height=1500,
-)
 
 # Create an app layout
 app.layout = html.Div(children=[html.H1('Pesquisa Evasão e Retensão',
@@ -40,6 +31,9 @@ app.layout = html.Div(children=[html.H1('Pesquisa Evasão e Retensão',
                                         {'label': 'Total', 'value': 'df'},
                                         {'label': 'Primeira Situação', 'value': 'first_df'},
                                         {'label': 'Última Situação', 'value': 'last_df'},
+                                        {'label': 'Evadidos', 'value': 'left_df'},
+                                        {'label': 'Atrasados', 'value': 'late_df'},
+                                        {'label': 'Trajetória Completa', 'value': 'allTrajetory_df'},
                                     ],
                                     value='df',
                                     placeholder="Select the Dataframe",
@@ -52,8 +46,10 @@ app.layout = html.Div(children=[html.H1('Pesquisa Evasão e Retensão',
                                         {'label': 'Coeficiente de rendimento', 'value': 'CR'},
                                         {'label': 'Atraso', 'value': 'Atraso'},
                                         {'label': 'Evadiu', 'value': 'Evadiu'},
+                                        {'label': 'Disciplinas aprov/matr', 'value': 'Disciplinas aprov/matr'},
+                                        {'label': 'Disciplinas aprov/matr acumuladas', 'value': 'Disciplinas aprov/matr acumuladas'},
                                     ],
-                                    value='Evadiu',
+                                    value='CR',
                                     placeholder="Select a Statistics",
                                     searchable=True
                                     ),
@@ -76,6 +72,8 @@ app.layout = html.Div(children=[html.H1('Pesquisa Evasão e Retensão',
                                         {'label': 'Disciplinas aprovadas acumuladas', 'value': 'Disciplinas aprovadas acumuladas'},
                                         {'label': 'Disciplinas aprov/matr', 'value': 'Disciplinas aprov/matr'},
                                         {'label': 'Disciplinas aprov/matr acumuladas', 'value': 'Disciplinas aprov/matr acumuladas'},
+                                        {'label': 'Disciplinas reprovadas', 'value': 'Disciplinas reprovadas'},
+                                        {'label': 'Disciplinas reprovadas acumuladas', 'value': 'Disciplinas reprovadas acumuladas'},
                                         {'label': 'Disciplinas reprovadas por nota', 'value': 'Disciplinas reprovadas por nota'},
                                         {'label': 'Disciplinas reprovadas por nota acumuladas', 'value': 'Disciplinas reprovadas por nota acumuladas'},
                                         {'label': 'Disciplinas reprovadas por frequência', 'value': 'Disciplinas reprovadas por frequência'},
@@ -96,7 +94,7 @@ app.layout = html.Div(children=[html.H1('Pesquisa Evasão e Retensão',
                                         {'label': 'Situação', 'value': 'Situação'},
                                         {'label': 'UF SISU', 'value': 'UF SISU'},
                                     ],
-                                    value='Situação',
+                                    value='Ano de ingresso',
                                     placeholder="Select a value",
                                     searchable=True
                                     ),
@@ -105,7 +103,7 @@ app.layout = html.Div(children=[html.H1('Pesquisa Evasão e Retensão',
                                 html.Div(dcc.Graph(id='chart')),
                                 html.Br(),
 
-                                html.Div(dcc.Graph(figure = fig )),
+                                html.Div(dcc.Graph(id='corr')),
                                 ])
 
 @app.callback(Output(component_id='chart', component_property='figure'),
@@ -115,6 +113,12 @@ def get_chart(dataframe, statistics, st2):
         new_df = first_df
     elif dataframe == "last_df":
         new_df = last_df
+    elif dataframe == "left_df":
+        new_df = left_df
+    elif dataframe == "late_df":
+        new_df = late_df
+    elif dataframe == "allTrajetory_df":
+        new_df = allTrajetory_df
     else:
         new_df = df
 
@@ -129,6 +133,35 @@ def get_chart(dataframe, statistics, st2):
             tmp_df = new_df.groupby(st2)[statistics].mean()
             f = px.line(tmp_df, y=statistics)
     return f
+
+@app.callback(Output(component_id='corr', component_property='figure'),
+              Input(component_id='dropdownDataframe', component_property='value'))
+def get_corr(dataframe):
+    if dataframe == "first_df":
+        new_df = first_df
+    elif dataframe == "last_df":
+        new_df = last_df
+    elif dataframe == "left_df":
+        new_df = left_df
+    elif dataframe == "late_df":
+        new_df = late_df
+    elif dataframe == "allTrajetory_df":
+        new_df = allTrajetory_df
+    else:
+        new_df = df
+
+    fig = go.Figure(data=go.Heatmap(
+        z= new_df.corr(),
+        x= new_df.corr().columns,
+        y= new_df.corr().columns,
+        colorscale="jet"))
+
+    fig.update_layout(
+    autosize=False,
+    width=1500,
+    height=1500,
+    )
+    return fig
 
 # Run the app
 if __name__ == '__main__':
